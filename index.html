@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>ComfyUI Cloud Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg0: #0a0a0a;
+  --bg1: #111111;
+  --bg2: #161616;
+  --bg3: #222222;
+  --bg4: #2a2a2a;
+  --border: #2a2a2a;
+  --text: #e8e8e8;
+  --muted: #666666;
+  --subtle: #444444;
+  --accent: #e8a045;
+  --accent-dim: rgba(232,160,69,0.12);
+  --green: #5aaa7a;
+  --red: #c96060;
+  --yellow: #c8a84b;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg1);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* ── Connection bar ── */
+#conn-bar {
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#conn-bar h1 {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  margin-right: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cb-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.cb-input {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.cb-input:focus { outline: none; border-color: var(--accent); }
+#cb-host  { width: 160px; }
+#cb-port  { width: 70px; }
+#cb-key   { width: 190px; cursor: pointer; }
+#conn-status {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--red);
+  white-space: nowrap;
+  font-weight: 500;
+}
+#conn-status.ok { color: var(--green); }
+.cb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+/* ── Layout principale ── */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 210px;
+  min-width: 190px;
+  background: var(--bg0);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sb-section {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--subtle);
+  padding: 14px 14px 5px;
+  font-weight: 600;
+}
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s, color 0.1s;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.sb-item:hover { background: var(--bg2); color: var(--text); }
+.sb-item.active { background: var(--bg2); border-left-color: var(--accent); color: var(--text); }
+.sb-item .ico {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.sb-item.active .ico { opacity: 1; }
+
+/* Libreria */
+#sb-lib { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+.lib-cat {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--subtle);
+  padding: 8px 14px 3px;
+  font-weight: 600;
+}
+.lib-item {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 14px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s;
+}
+.lib-item:hover { background: var(--bg2); }
+.lib-item.running { border-left-color: var(--yellow); }
+.lib-name { font-size: 12px; font-weight: 600; }
+.lib-meta { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+/* ── Contenuto destro ── */
+#content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Panels */
+.panel { display: none; flex-direction: column; flex: 1; padding: 20px; gap: 14px; overflow-y: auto; }
+.panel.active { display: flex; }
+.panel h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.field-group { display: flex; flex-direction: column; gap: 4px; }
+.field-group label {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-weight: 600;
+}
+.field-group input, .field-group select, .field-group textarea {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+.field-group input:focus, .field-group select:focus { outline: none; border-color: var(--accent); }
+
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+
+/* Bottoni */
+.btn {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.35; cursor: default; }
+.btn-primary   { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+.btn-primary:hover { opacity: 1; background: #f0aa55; border-color: #f0aa55; }
+.btn-secondary { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.btn-secondary:hover { opacity: 1; background: var(--bg4); }
+.btn-danger    { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-green     { background: transparent; color: var(--green); border-color: var(--green); }
+.btn-yellow    { background: transparent; color: var(--yellow); border-color: var(--yellow); }
+.btn-sm { padding: 4px 10px; font-size: 11.5px; }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ── Log area ── */
+#log-area {
+  background: var(--bg0);
+  border-top: 1px solid var(--border);
+  height: 185px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+}
+#log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background: var(--bg0);
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--subtle);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  gap: 8px;
+}
+.log-tabs { display: flex; gap: 4px; }
+.log-tab {
+  padding: 2px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.log-tab.active { border-color: var(--border); color: var(--text); background: var(--bg2); }
+#log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Menlo', monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #6db88a;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* GPU panel */
+#gpu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gpu-card {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 16px;
+}
+.gpu-card .label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-weight: 600;
+}
+.gpu-card .value { font-size: 22px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.gpu-card .value.ok   { color: var(--green); }
+.gpu-card .value.warn { color: var(--yellow); }
+.gpu-card .value.hot  { color: var(--red); }
+.gpu-name { font-size: 12px; color: var(--accent); margin-bottom: 12px; font-weight: 600; }
+#gpu-raw { font-family: monospace; font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+/* Download Output inner tabs */
+.output-tabs { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.output-tab  { padding: 5px 16px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--muted); background: transparent; border-bottom: 2px solid transparent; transition: color .15s; margin-bottom: -1px; }
+.output-tab:hover  { color: var(--text); }
+.output-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.output-sub        { display: none; flex-direction: column; gap: 12px; }
+.output-sub.active { display: flex; }
+
+/* Watch panel */
+.watch-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.watch-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--subtle); }
+.watch-dot.active { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.35 } }
+
+/* SSH pubkey box */
+.pubkey-box {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-size: 10.5px;
+  color: #6db88a;
+  word-break: break-all;
+  line-height: 1.6;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+/* ── Guida SSH ── */
+.guide-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.guide-tab {
+  padding: 6px 18px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.1s;
+}
+.guide-tab:hover { color: var(--text); }
+.guide-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.guide-body { display: none; }
+.guide-body.active { display: block; }
+.guide-step { display: none; flex-direction: column; gap: 10px; }
+.guide-step.active { display: flex; }
+.guide-step-header { display: flex; align-items: center; gap: 10px; }
+.guide-step-num {
+  width: 24px; height: 24px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #0a0a0a;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.guide-step-title { font-size: 13px; font-weight: 600; }
+.guide-step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; padding-left: 34px; }
+
+.guide-img-wrap {
+  margin-left: 34px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg0);
+  max-width: 520px;
+}
+.guide-img-wrap img { width: 100%; display: block; }
+.guide-img-placeholder {
+  width: 100%;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--subtle);
+  font-size: 11px;
+  background: var(--bg0);
+  border: 1px dashed var(--bg4);
+}
+.guide-img-placeholder .ph-icon { font-size: 22px; opacity: 0.3; }
+.guide-img-placeholder .ph-label { opacity: 0.5; text-align: center; padding: 0 20px; }
+
+.guide-nav { display: flex; align-items: center; gap: 10px; margin-left: 34px; margin-top: 4px; }
+.guide-dots { display: flex; gap: 5px; flex: 1; justify-content: center; }
+.guide-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bg4); transition: background 0.2s; cursor: pointer; }
+.guide-dot.active { background: var(--accent); }
+.guide-counter { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* Destination presets */
+.dest-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  transition: border-color 0.1s, color 0.1s;
+}
+.preset-btn:hover { border-color: var(--subtle); color: var(--text); }
+.preset-btn.sel { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+.hint { font-size: 11px; color: var(--muted); }
+
+/* Script row */
+.script-row { display: flex; gap: 6px; align-items: center; }
+.script-row input { flex: 1; }
+
+/* Library grid */
+#lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+}
+.lib-card {
+  background: var(--bg0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 11px 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lib-card:hover { border-color: var(--subtle); background: var(--bg2); }
+.lib-card.running { border-color: var(--yellow); }
+.lib-card .lc-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.lib-card .lc-name   { font-size: 12px; font-weight: 600; line-height: 1.3; }
+.lib-card .lc-author { font-size: 10px; font-weight: 600; white-space: nowrap; opacity: 0.6; flex-shrink: 0; }
+.lib-card .lc-gb     { font-size: 11px; color: var(--accent); font-weight: 500; }
+.lib-card .lc-desc   { font-size: 11px; color: var(--muted); line-height: 1.4; flex: 1; }
+.lib-card .lc-run {
+  margin-top: 8px;
+  padding: 5px 0;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s;
+}
+.lib-card .lc-run:hover { background: var(--accent-dim); }
+.lib-card.running .lc-run { color: var(--yellow); border-color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<!-- ── Connection bar ── -->
+<div id="conn-bar">
+  <h1>ComfyUI Cloud</h1>
+
+  <span class="cb-label">Provider</span>
+  <select id="cb-provider" class="cb-input" style="width:90px" onchange="onProviderChange()">
+    <option value="runpod">RunPod</option>
+    <option value="vast">Vast.ai</option>
+    <option value="other">Other</option>
+  </select>
+
+  <span class="cb-label">Host / IP</span>
+  <input id="cb-host" class="cb-input" placeholder="host or IP">
+
+  <span class="cb-label">Port</span>
+  <input id="cb-port" class="cb-input" placeholder="22">
+
+  <span class="cb-label">SSH Key</span>
+  <select id="cb-key" class="cb-input" style="width:200px">
+    <option value="">— no key found —</option>
+  </select>
+  <button class="btn btn-secondary btn-sm" onclick="pickKey()" title="Browse for key file">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M2 12.5V14h1.5l4.94-4.94-1.5-1.5L2 12.5z"/><path d="M13.66 3.84a1.06 1.06 0 0 0 0-1.5L12.16 .84a1.06 1.06 0 0 0-1.5 0L9.44 2.06l2.5 2.5 1.72-1.72z"/></svg>
+  </button>
+
+  <button class="btn btn-primary btn-sm" onclick="connect()">Connect</button>
+  <button class="btn btn-secondary btn-sm" onclick="showPanel('ssh')">SSH Key</button>
+
+  <div class="cb-sep"></div>
+  <div id="conn-status">not connected</div>
+</div>
+
+<!-- ── Layout principale ── -->
+<div id="main">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="sb-section">Tools</div>
+    <div class="sb-item active" onclick="showPanel('deploy')" data-panel="deploy">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v10M4 7l4 4 4-4"/><path d="M2 13h12"/></svg>
+      Deploy Script
+    </div>
+    <div class="sb-item" onclick="showPanel('civitai')" data-panel="civitai">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8l3 3 3-3"/></svg>
+      Civitai Download
+    </div>
+    <div class="sb-item" onclick="showPanel('output')" data-panel="output">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V4h6v5"/><path d="M8 4V1"/></svg>
+      Download Output
+    </div>
+    <div class="sb-item" onclick="showPanel('gpu')" data-panel="gpu">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="14" height="8" rx="1"/><path d="M4 4V2M8 4V2M12 4V2M4 12v2M8 12v2M12 12v2"/></svg>
+      GPU Monitor
+    </div>
+    <div class="sb-item" onclick="showPanel('settings')" data-panel="settings">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42"/></svg>
+      Settings
+    </div>
+
+  </div>
+
+  <!-- Contenuto -->
+  <div id="content">
+
+    <!-- Deploy Script -->
+    <div class="panel active" id="panel-deploy">
+      <h2>Deploy Script</h2>
+
+      <!-- Custom script -->
+      <div class="field-group">
+        <label>Custom .sh script</label>
+        <div class="script-row">
+          <input id="d-script" type="text" placeholder="Select a local script..." readonly>
+          <button class="btn btn-secondary btn-sm" onclick="pickScript()">Browse</button>
+          <button class="btn btn-primary btn-sm" onclick="deployScript()">▶ Run</button>
+        </div>
+      </div>
+
+      <!-- Library -->
+      <div style="border-top:1px solid var(--bg3);padding-top:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">
+            Model Library
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="addToLibrary()">+ Add to library</button>
+        </div>
+        <div id="lib-filter" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <div class="preset-btn sel" data-cat="all"   onclick="filterLib(this,'all')">All</div>
+          <div class="preset-btn"     data-cat="video" onclick="filterLib(this,'video')">Video</div>
+          <div class="preset-btn"     data-cat="image" onclick="filterLib(this,'image')">Image</div>
+        </div>
+        <div id="lib-grid"></div>
+      </div>
+    </div>
+
+    <!-- Civitai -->
+    <div class="panel" id="panel-civitai">
+      <h2>Civitai Download</h2>
+      <div class="field-group">
+        <label>Model URL (civitai.red or civitai.com)</label>
+        <input id="c-url" type="text" placeholder="https://civitai.red/api/download/models/...">
+      </div>
+      <div class="row">
+        <div class="field-group">
+          <label>Destination folder</label>
+          <select id="c-folder">
+            <option value="loras">loras</option>
+            <option value="diffusion_models">diffusion_models</option>
+            <option value="checkpoints">checkpoints</option>
+            <option value="vae">vae</option>
+            <option value="text_encoders">text_encoders</option>
+            <option value="upscale_models">upscale_models</option>
+            <option value="controlnet">controlnet</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>File name (without .safetensors)</label>
+          <input id="c-name" type="text" placeholder="model_name">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="downloadCivitai()">Download to Server</button>
+      </div>
+      <p class="hint">Civitai token can be configured in Settings.</p>
+    </div>
+
+    <!-- Download Output (Fetch + Watch combined) -->
+    <div class="panel" id="panel-output">
+      <h2>Download Output</h2>
+
+      <!-- inner tabs -->
+      <div class="output-tabs">
+        <div class="output-tab active" id="otab-fetch" onclick="switchOutputTab('fetch')">Fetch once</div>
+        <div class="output-tab"        id="otab-watch" onclick="switchOutputTab('watch')">Watch live</div>
+      </div>
+
+      <!-- Fetch sub-panel -->
+      <div class="output-sub active" id="osub-fetch">
+        <div class="field-group">
+          <label>Local destination</label>
+          <div class="dest-presets" id="dest-presets"></div>
+        </div>
+        <div class="field-group">
+          <label>Or custom path</label>
+          <div class="script-row">
+            <input id="f-custom" type="text" placeholder="">
+            <button class="btn btn-secondary btn-sm" onclick="pickFolder('f-custom')">Browse</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Subfolder</label>
+          <input id="f-folder" type="text" placeholder="output" value="output">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="fetchOutput()">Download Files</button>
+        </div>
+        <p class="hint">One-shot rsync: downloads all current output files from the server.</p>
+      </div>
+
+      <!-- Watch sub-panel -->
+      <div class="output-sub" id="osub-watch">
+        <div class="watch-status">
+          <div class="watch-dot" id="watch-dot"></div>
+          <span id="watch-label">Watch not active</span>
+        </div>
+        <div class="field-group">
+          <label>Local destination</label>
+          <div class="dest-presets" id="watch-dest-presets"></div>
+        </div>
+        <div class="field-group">
+          <label>Or custom path</label>
+          <div class="script-row">
+            <input id="w-custom" type="text" placeholder="">
+            <button class="btn btn-secondary btn-sm" onclick="pickFolder('w-custom')">Browse</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Subfolder</label>
+          <input id="w-folder" type="text" placeholder="output" value="output">
+        </div>
+        <div class="field-group">
+          <label>Check interval (seconds)</label>
+          <input id="w-interval" type="number" value="15" min="5" max="300" style="width:80px">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-green" id="btn-watch-start" onclick="watchStart()">▶ Start Watch</button>
+          <button class="btn btn-danger" id="btn-watch-stop" onclick="watchStop()" disabled>■ Stop</button>
+        </div>
+        <p class="hint">Watch runs in the background — files are downloaded automatically at each interval while ComfyUI generates.</p>
+      </div>
+    </div>
+
+    <!-- GPU Monitor -->
+    <div class="panel" id="panel-gpu">
+      <h2>GPU Monitor</h2>
+      <div class="btn-row" style="margin-bottom:8px">
+        <button class="btn btn-green btn-sm" id="btn-gpu-start" onclick="gpuStart()">▶ Start Monitor</button>
+        <button class="btn btn-danger btn-sm" id="btn-gpu-stop" onclick="gpuStop()" disabled>■ Stop</button>
+      </div>
+      <div id="gpu-name" class="gpu-name">—</div>
+      <div id="gpu-grid">
+        <div class="gpu-card">
+          <div class="label">VRAM Used</div>
+          <div class="value ok" id="gpu-mem-used">—</div>
+        </div>
+        <div class="gpu-card">
+          <div class="label">VRAM Total</div>
+          <div class="value ok" id="gpu-mem-total">—</div>
+        </div>
+        <div class="gpu-card">
+          <div class="label">Temperature</div>
+          <div class="value ok" id="gpu-temp">—</div>
+        </div>
+        <div class="gpu-card">
+          <div class="label">GPU Usage</div>
+          <div class="value ok" id="gpu-util">—</div>
+        </div>
+      </div>
+      <div id="gpu-raw"></div>
+    </div>
+
+    <!-- SSH Key -->
+    <div class="panel" id="panel-ssh">
+      <h2>SSH Key</h2>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <p class="hint" style="line-height:1.6">
+          Generate a dedicated SSH key for ComfyUI Cloud Manager.<br>
+          Then follow the guide below to add it to your provider.
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="generateKey()">Generate SSH Key</button>
+          <button class="btn btn-secondary" onclick="pickKeyPanel()">Use existing key...</button>
+        </div>
+      </div>
+
+      <div id="pubkey-section" style="display:none;flex-direction:column;gap:8px">
+        <div class="field-group">
+          <label>Public key — copy and paste into your provider</label>
+          <div class="pubkey-box" id="pubkey-text"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-green btn-sm" onclick="copyPubKey()">Copy Public Key</button>
+          <span id="copy-confirm" style="font-size:11px;color:var(--green);display:none">✓ Copied!</span>
+        </div>
+        <div class="field-group">
+          <label>Private key path (already set in the connection bar)</label>
+          <input id="keypath-text" type="text" readonly>
+        </div>
+      </div>
+
+      <!-- Visual guide -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px">
+          How to add the key to your provider
+        </div>
+
+        <div class="guide-tabs">
+          <div class="guide-tab active" onclick="switchGuide('runpod')">RunPod</div>
+          <div class="guide-tab" onclick="switchGuide('vast')">Vast.ai</div>
+        </div>
+
+        <!-- RunPod -->
+        <div class="guide-body active" id="guide-runpod">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="guide-step-header">
+              <div class="guide-step-num">1</div>
+              <div class="guide-step-title">Go to Settings</div>
+            </div>
+            <div class="guide-step-desc">Log in to <strong>runpod.io</strong>, click your avatar in the top right and select <strong>Settings</strong>.</div>
+            <div class="guide-step-header">
+              <div class="guide-step-num">2</div>
+              <div class="guide-step-title">Add the SSH key</div>
+            </div>
+            <div class="guide-step-desc">Scroll to <strong>SSH Public Keys</strong>, click <strong>+ Add Key</strong>, give it a name (e.g. <em>ComfyManager</em>), paste the public key copied above and confirm.</div>
+            <div class="guide-step-header">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-title">Start the Pod</div>
+            </div>
+            <div class="guide-step-desc">Create a new Pod — the key is included automatically. Copy the <strong>host</strong> and <strong>port</strong> from the Pod connection screen and enter them in the top bar of this app.</div>
+          </div>
+        </div>
+
+        <!-- Vast.ai -->
+        <div class="guide-body" id="guide-vast">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="guide-step-header">
+              <div class="guide-step-num">1</div>
+              <div class="guide-step-title">Go to Account</div>
+            </div>
+            <div class="guide-step-desc">Log in to <strong>vast.ai</strong>, click the menu in the top right and select <strong>Account</strong>.</div>
+            <div class="guide-step-header">
+              <div class="guide-step-num">2</div>
+              <div class="guide-step-title">Add the SSH key</div>
+            </div>
+            <div class="guide-step-desc">Scroll to <strong>SSH Keys</strong>, click <strong>Add SSH Key</strong>, paste the public key copied above and confirm with <strong>Save</strong>.</div>
+            <div class="guide-step-header">
+              <div class="guide-step-num">3</div>
+              <div class="guide-step-title">Start the instance</div>
+            </div>
+            <div class="guide-step-desc">Once the instance is running, click <strong>Connect</strong>. You will find the <strong>host</strong> (e.g. <code>ssh6.vast.ai</code>) and <strong>port</strong> to enter in the top bar of this app.</div>
+          </div>
+        </div>
+
+      </div><!-- /guide -->
+    </div>
+
+    <!-- Settings -->
+    <div class="panel" id="panel-settings">
+      <h2>Settings</h2>
+
+      <div class="field-group">
+        <label>HuggingFace Token</label>
+        <input id="s-hf" type="password" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <span class="hint">Required to download models from HuggingFace</span>
+      </div>
+
+      <div class="field-group">
+        <label>Civitai Token</label>
+        <input id="s-civitai" type="password" placeholder="cf0ed9c2...">
+        <span class="hint">Required to download models from Civitai</span>
+      </div>
+
+      <div class="field-group">
+        <label>Local output paths (one per line, format: Label|/path)</label>
+        <textarea id="s-paths" rows="4" style="resize:vertical;background:var(--bg0);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:3px;font-size:12px;font-family:'JetBrains Mono','Cascadia Code',monospace"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn btn-secondary btn-sm" onclick="addPathPreset()">+ Add folder...</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Remote output path (leave empty for auto)</label>
+        <input id="s-output-path" type="text" placeholder="e.g. /workspace/ComfyUI/output">
+      </div>
+      <div class="field-group">
+        <label>Remote models path (leave empty for auto)</label>
+        <input id="s-models-path" type="text" placeholder="e.g. /workspace/ComfyUI/models">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ── Log ── -->
+<div id="log-area">
+  <div id="log-header">
+    <div class="log-tabs">
+      <div class="log-tab active" id="tab-log"   onclick="switchLogTab('log')">Output</div>
+      <div class="log-tab"        id="tab-watch" onclick="switchLogTab('watch')">Watch</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
+      <button class="btn btn-danger btn-sm" id="btn-stop-script" onclick="stopScript()" style="display:none">■ Stop</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.api.openLogWindow()" title="Open log in separate window">⧉ Detach</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearLog()">Clear</button>
+    </div>
+  </div>
+  <div id="log"></div>
+</div>
+
+<!-- Update banner (hidden until update-available event) -->
+<div id="update-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#0a0a0a;font-size:12px;font-weight:500;padding:7px 16px;align-items:center;gap:10px;z-index:999">
+  <span id="update-text"></span>
+  <a id="update-link" href="#" style="color:#0a0a0a;font-weight:700;text-decoration:underline" onclick="openUpdateLink(event)">Open release page</a>
+  <button onclick="document.getElementById('update-banner').style.display='none'" style="margin-left:auto;background:transparent;border:none;color:#0a0a0a;cursor:pointer;font-size:16px;line-height:1">✕</button>
+</div>
+
+<script>
+// ── Global state ──
+let config = { conn: null, civitaiToken: '', hfToken: '', localOutputPaths: [], conn_outputPath: '', conn_modelsPath: '' }
+let selectedDest = null
+let selectedWatchDest = null
+let currentLogTab = 'log'
+let pubKeyValue = ''
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', async () => {
+  config = await window.api.loadConfig() || config
+
+  if (config.conn) {
+    const c = config.conn
+    document.getElementById('cb-provider').value = c.provider || 'runpod'
+    document.getElementById('cb-host').value     = c.host    || ''
+    document.getElementById('cb-port').value     = c.port    || ''
+    updateStatus(true)
+    onProviderChange()
+  }
+
+  document.getElementById('s-hf').value           = config.hfToken || ''
+  document.getElementById('s-civitai').value      = config.civitaiToken || ''
+  document.getElementById('s-output-path').value  = config.conn?.outputPath || ''
+  document.getElementById('s-models-path').value  = config.conn?.modelsPath || ''
+  const pathsText = (config.localOutputPaths || []).map(p => `${p.label}|${p.path}`).join('\n')
+  document.getElementById('s-paths').value = pathsText
+
+  await scanAndPopulateSshKeys()
+  buildDestPresets()
+  await loadLibrary()
+
+  window.api.onLog(d => {
+    if (currentLogTab === 'log') appendLog(d)
+    else logBuffers.log += d
+  })
+  window.api.onWatch(d => {
+    if (currentLogTab === 'watch') appendLog(d)
+    else logBuffers.watch += d
+  })
+  window.api.onGpu(d => parseGpu(d))
+
+  window.api.onUpdateAvailable(({ latest, url }) => {
+    const banner = document.getElementById('update-banner')
+    document.getElementById('update-text').textContent = `Update available: v${latest}`
+    document.getElementById('update-link').dataset.url = url
+    banner.style.display = 'flex'
+  })
+})
+
+let _updateUrl = ''
+function openUpdateLink(e) {
+  e.preventDefault()
+  const url = document.getElementById('update-link').dataset.url
+  if (url) window.open(url, '_blank')
+}
+
+const logBuffers = { log: '', watch: '' }
+
+function switchLogTab(tab) {
+  currentLogTab = tab
+  document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'))
+  document.getElementById('tab-' + tab).classList.add('active')
+  const el = document.getElementById('log')
+  el.textContent = logBuffers[tab] || ''
+  el.scrollTop = el.scrollHeight
+}
+
+// ── SSH key scan ──
+
+async function scanAndPopulateSshKeys() {
+  const keys = await window.api.scanSshKeys()
+  const sel  = document.getElementById('cb-key')
+  sel.innerHTML = '<option value="">— select a key —</option>'
+
+  keys.forEach(k => {
+    const opt = document.createElement('option')
+    opt.value = k.path
+    opt.textContent = k.name
+    sel.appendChild(opt)
+  })
+
+  const saved = config.conn?.sshKey
+  if (saved && keys.find(k => k.path === saved)) {
+    sel.value = saved
+  }
+}
+
+async function pickKey() {
+  const p = await window.api.pickSshKey()
+  if (!p) return
+  const sel = document.getElementById('cb-key')
+  if (![...sel.options].find(o => o.value === p)) {
+    const opt = document.createElement('option')
+    opt.value = p
+    opt.textContent = p.split('/').pop() + ' (manual)'
+    sel.appendChild(opt)
+  }
+  sel.value = p
+}
+
+// ── Connection ──
+
+function onProviderChange() {
+  const p = document.getElementById('cb-provider').value
+  const portEl = document.getElementById('cb-port')
+  if (p === 'runpod' && !portEl.value) portEl.value = '22'
+}
+
+async function connect() {
+  const conn = buildConn()
+  if (!conn) return
+  config.conn = conn
+  await window.api.saveConfig(config)
+  updateStatus(true)
+  appendLog(`\n=== Connection saved: ${conn.provider} — ${conn.host}:${conn.port} ===\n`)
+  appendLog('Testing connection...\n')
+  await window.api.testConnection(conn)
+}
+
+function buildConn() {
+  const host   = document.getElementById('cb-host').value.trim()
+  const port   = document.getElementById('cb-port').value.trim()
+  const sshKey = document.getElementById('cb-key').value
+  if (!host || !port) { appendLog('⚠ Enter host and port\n'); return null }
+  if (!sshKey) { appendLog('⚠ No SSH key selected — generate one from the "SSH Key" panel\n'); return null }
+  return {
+    provider:    document.getElementById('cb-provider').value,
+    host, port, sshKey,
+    outputPath:  config.conn?.outputPath || '',
+    modelsPath:  config.conn?.modelsPath || ''
+  }
+}
+
+function updateStatus(ok) {
+  const el = document.getElementById('conn-status')
+  if (ok && config.conn) {
+    el.textContent = `● ${config.conn.provider} — ${config.conn.host}:${config.conn.port}`
+    el.className = 'ok'
+  } else {
+    el.textContent = '● not connected'
+    el.className = ''
+  }
+}
+
+function checkConn() {
+  if (!config.conn) {
+    appendLog('⚠ Configure and connect first using the top bar\n')
+    return false
+  }
+  return true
+}
+
+// ── SSH Key panel ──
+
+async function generateKey() {
+  const res = await window.api.generateSshKey()
+  if (res.error) { appendLog('Error: ' + res.error + '\n'); return }
+  pubKeyValue = res.pubKey
+  document.getElementById('pubkey-text').textContent = res.pubKey
+  document.getElementById('keypath-text').value = res.keyPath
+  document.getElementById('pubkey-section').style.display = ''
+  await scanAndPopulateSshKeys()
+  if (res.existed) appendLog('SSH key already exists — reusing it.\n')
+  else appendLog('SSH key generated: ' + res.keyPath + '\nCopy the public key into your provider.\n')
+}
+
+async function pickKeyPanel() {
+  await pickKey()
+  appendLog('SSH key set: ' + document.getElementById('cb-key').value + '\n')
+}
+
+function copyPubKey() {
+  navigator.clipboard.writeText(pubKeyValue)
+  appendLog('Public key copied!\n')
+}
+
+// ── Library ──
+
+let allLibItems = []
+
+// Author badge colors
+const AUTHOR_COLORS = {
+  'LTX Studio':    '#89b4fa',
+  'Wan Video':     '#a6e3a1',
+  'FireRed':       '#f38ba8',
+  'Qwen / Alibaba':'#f9e2af',
+  'Z-Image':       '#cba6f7',
+}
+
+async function loadLibrary() {
+  allLibItems = await window.api.getLibrary()
+  renderLibrary('all')
+}
+
+function filterLib(btn, cat) {
+  document.querySelectorAll('#lib-filter .preset-btn').forEach(b => b.classList.remove('sel'))
+  btn.classList.add('sel')
+  renderLibrary(cat)
+}
+
+function renderLibrary(cat) {
+  const grid = document.getElementById('lib-grid')
+  grid.innerHTML = ''
+  const items = cat === 'all' ? allLibItems : allLibItems.filter(i => i.category === cat)
+  if (items.length === 0) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">No scripts in this category.</div>'
+    return
+  }
+  items.forEach(item => {
+    const card = document.createElement('div')
+    card.className = 'lib-card'
+    card.id = 'lib-' + item.file
+    const authorColor = AUTHOR_COLORS[item.author] || 'var(--muted)'
+    const authorBadge = item.author
+      ? `<span class="lc-author" style="color:${authorColor}">${item.author}</span>`
+      : ''
+    card.innerHTML = `
+      <div class="lc-header">
+        <div class="lc-name">${item.name}</div>
+        ${authorBadge}
+      </div>
+      <div class="lc-gb">${item.gb}</div>
+      <div class="lc-desc">${item.desc}</div>
+      <button class="lc-run" onclick="event.stopPropagation();runLibraryScript(${JSON.stringify(item).replace(/"/g,'&quot;')})">▶ Run on server</button>
+    `
+    grid.appendChild(card)
+  })
+}
+
+async function runLibraryScript(item) {
+  if (!checkConn()) return
+  const card = document.getElementById('lib-' + item.file)
+  if (card) card.classList.add('running')
+  document.getElementById('d-script').value = item.path
+  appendLog(`\n=== Library: ${item.name} ===\n`)
+  setDeployRunning(true)
+  await window.api.deployScript({ conn: config.conn, scriptPath: item.path, hfToken: config.hfToken })
+  setDeployRunning(false)
+  if (card) card.classList.remove('running')
+}
+
+// ── Deploy ──
+
+function setDeployRunning(running) {
+  document.getElementById('btn-stop-script').style.display = running ? 'inline-flex' : 'none'
+}
+
+async function stopScript() {
+  await window.api.stopScript()
+  setDeployRunning(false)
+  appendLog('\n⛔ Script stopped by user.\n')
+}
+
+async function pickScript() {
+  const p = await window.api.pickScript()
+  if (p) document.getElementById('d-script').value = p
+}
+
+async function deployScript() {
+  if (!checkConn()) return
+  const scriptPath = document.getElementById('d-script').value
+  if (!scriptPath) { appendLog('⚠ Select a script first\n'); return }
+  appendLog(`\n=== Deploy: ${scriptPath.split('/').pop()} ===\n`)
+  setDeployRunning(true)
+  await window.api.deployScript({ conn: config.conn, scriptPath, hfToken: config.hfToken })
+  setDeployRunning(false)
+}
+
+async function addToLibrary() {
+  const result = await window.api.addToLibrary()
+  if (!result) return
+  if (result.error) { appendLog(`⚠ ${result.error}\n`); return }
+  allLibItems.push(result)
+  appendLog(`✅ "${result.file}" added to library.\n`)
+  renderLibrary(document.querySelector('#lib-filter .preset-btn.sel')?.dataset?.cat || 'all')
+}
+
+// ── Civitai ──
+
+async function downloadCivitai() {
+  if (!checkConn()) return
+  const url      = document.getElementById('c-url').value.trim()
+  const folder   = document.getElementById('c-folder').value
+  const filename = document.getElementById('c-name').value.trim() || 'model'
+  const token    = config.civitaiToken || ''
+  if (!url) { appendLog('⚠ Enter URL\n'); return }
+  if (!token) { appendLog('⚠ Set the Civitai token in Settings\n'); return }
+  appendLog(`\n=== Civitai Download: ${filename} → ${folder} ===\n`)
+  await window.api.downloadCivitai({ conn: config.conn, url, folder, filename, token })
+}
+
+// ── Fetch Output ──
+
+function buildDestPresets() {
+  const paths = config.localOutputPaths || []
+  const render = (containerId, setter) => {
+    const container = document.getElementById(containerId)
+    container.innerHTML = ''
+    paths.forEach((p, i) => {
+      const btn = document.createElement('div')
+      btn.className = 'preset-btn' + (i === 0 ? ' sel' : '')
+      btn.textContent = p.label
+      btn.onclick = () => {
+        container.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('sel'))
+        btn.classList.add('sel')
+        setter(p.path)
+      }
+      container.appendChild(btn)
+      if (i === 0) setter(p.path)
+    })
+  }
+  render('dest-presets',       v => selectedDest = v)
+  render('watch-dest-presets', v => selectedWatchDest = v)
+}
+
+async function fetchOutput() {
+  if (!checkConn()) return
+  const base   = document.getElementById('f-custom').value.trim() || selectedDest || ''
+  const folder = document.getElementById('f-folder').value.trim() || 'output'
+  if (!base) { appendLog('⚠ Select or enter a destination\n'); return }
+  const localPath = base + '/' + folder
+  appendLog(`\n=== Fetch Output → ${localPath} ===\n`)
+  await window.api.fetchOutput({ conn: config.conn, localPath })
+}
+
+// ── Folder picker ──
+
+async function pickFolder(targetId) {
+  const p = await window.api.pickFolder()
+  if (p) document.getElementById(targetId).value = p
+}
+
+async function addPathPreset() {
+  const p = await window.api.pickFolder()
+  if (!p) return
+  const label = p.split('/').filter(Boolean).pop() || 'Folder'
+  const ta = document.getElementById('s-paths')
+  const existing = ta.value.trim()
+  ta.value = (existing ? existing + '\n' : '') + `${label}|${p}`
+}
+
+// ── Watch ──
+
+let watchActive = false
+
+async function watchStart() {
+  if (!checkConn()) return
+  const base   = document.getElementById('w-custom').value.trim() || selectedWatchDest || ''
+  const folder = document.getElementById('w-folder').value.trim() || 'output'
+  const interval = parseInt(document.getElementById('w-interval').value) || 15
+  if (!base) { appendLog('⚠ Select a destination for watch\n'); return }
+  const localPath = base + '/' + folder
+  await window.api.watchStart({ conn: config.conn, localPath, intervalSec: interval })
+  watchActive = true
+  document.getElementById('watch-dot').classList.add('active')
+  document.getElementById('watch-label').textContent = `Watch active → ${localPath}`
+  document.getElementById('btn-watch-start').disabled = true
+  document.getElementById('btn-watch-stop').disabled  = false
+  showPanel('output')
+  switchOutputTab('watch')
+  switchLogTab('watch')
+}
+
+async function watchStop() {
+  await window.api.watchStop()
+  watchActive = false
+  document.getElementById('watch-dot').classList.remove('active')
+  document.getElementById('watch-label').textContent = 'Watch stopped'
+  document.getElementById('btn-watch-start').disabled = false
+  document.getElementById('btn-watch-stop').disabled  = true
+}
+
+// ── GPU Monitor ──
+
+async function gpuStart() {
+  if (!checkConn()) return
+  await window.api.gpuStart(config.conn)
+  document.getElementById('btn-gpu-start').disabled = true
+  document.getElementById('btn-gpu-stop').disabled  = false
+}
+
+async function gpuStop() {
+  await window.api.gpuStop()
+  document.getElementById('btn-gpu-start').disabled = false
+  document.getElementById('btn-gpu-stop').disabled  = true
+  document.getElementById('gpu-name').textContent = '—'
+  ;['gpu-mem-used','gpu-mem-total','gpu-temp','gpu-util'].forEach(id => {
+    document.getElementById(id).textContent = '—'
+  })
+}
+
+function parseGpu(raw) {
+  document.getElementById('gpu-raw').textContent = raw.trim()
+  const line = raw.trim().split('\n')[0]
+  const parts = line.split(',').map(s => s.trim())
+  if (parts.length < 5) return
+  const [name, temp, memUsed, memTotal, util] = parts
+
+  document.getElementById('gpu-name').textContent = name
+
+  const setVal = (id, val, unit, warnVal, hotVal) => {
+    const el = document.getElementById(id)
+    el.textContent = val + unit
+    const n = parseFloat(val)
+    el.className = 'value' + (n >= hotVal ? ' hot' : n >= warnVal ? ' warn' : ' ok')
+  }
+
+  setVal('gpu-mem-used',  memUsed,  ' MB', 10000, 22000)
+  setVal('gpu-mem-total', memTotal, ' MB', 99999, 99999)
+  setVal('gpu-temp',      temp,     '°C',  75,    85)
+  setVal('gpu-util',      util,     '%',   90,    99)
+}
+
+// ── Browser ──
+
+async function openBrowser() {
+  if (!config.conn) { appendLog('⚠ Connect first\n'); return }
+  const url = await window.api.openInBrowser(config.conn)
+  appendLog(`\nOpened in browser: ${url}\n`)
+}
+
+// ── Settings ──
+
+async function saveSettings() {
+  config.hfToken = document.getElementById('s-hf').value.trim()
+  config.civitaiToken = document.getElementById('s-civitai').value.trim()
+
+  const pathsRaw = document.getElementById('s-paths').value.trim()
+  config.localOutputPaths = pathsRaw
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.includes('|'))
+    .map(l => { const [label, ...rest] = l.split('|'); return { label: label.trim(), path: rest.join('|').trim() } })
+
+  if (config.conn) {
+    config.conn.outputPath = document.getElementById('s-output-path').value.trim()
+    config.conn.modelsPath = document.getElementById('s-models-path').value.trim()
+  }
+
+  await window.api.saveConfig(config)
+  buildDestPresets()
+  appendLog('Settings saved.\n')
+}
+
+// ── UI helpers ──
+
+function switchOutputTab(tab) {
+  document.querySelectorAll('.output-tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.output-sub').forEach(s => s.classList.remove('active'))
+  document.getElementById('otab-' + tab).classList.add('active')
+  document.getElementById('osub-' + tab).classList.add('active')
+}
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'))
+  document.getElementById('panel-' + name).classList.add('active')
+  const sb = document.querySelector(`[data-panel="${name}"]`)
+  if (sb) sb.classList.add('active')
+}
+
+function appendLog(payload) {
+  // Accetta sia stringhe plain (da appendLog interni) sia { text, replace } dal main process
+  const text    = typeof payload === 'string' ? payload : payload.text
+  const replace = typeof payload === 'object' && payload.replace
+
+  const el = document.getElementById('log')
+
+  if (replace) {
+    // Sovrascrive l'ultima riga (progress bar wget/curl)
+    const lines = el.textContent.split('\n')
+    lines[lines.length - 1] = text
+    el.textContent = lines.join('\n')
+  } else {
+    logBuffers[currentLogTab] = (logBuffers[currentLogTab] || '') + text
+    if (currentLogTab === 'log' || currentLogTab === 'watch') {
+      el.textContent += text
+    }
+  }
+  el.scrollTop = el.scrollHeight
+}
+
+function clearLog() {
+  logBuffers[currentLogTab] = ''
+  document.getElementById('log').textContent = ''
+}
+
+// ── SSH guide ──
+
+function switchGuide(provider) {
+  document.querySelectorAll('.guide-tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.guide-body').forEach(b => b.classList.remove('active'))
+  event.target.classList.add('active')
+  document.getElementById('guide-' + provider).classList.add('active')
+}
+</script>
+</body>
+</html>

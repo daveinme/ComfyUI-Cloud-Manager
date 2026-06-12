@@ -1,0 +1,38 @@
+{
+  "name": "comfy-cloud-manager",
+  "version": "0.2.1",
+  "description": "Desktop manager for ComfyUI on cloud GPU providers",
+  "main": "index.js",
+  "author": "daveinme",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/daveinme/scriptcomfy" },
+  "scripts": {
+    "start": "electron .",
+    "build:linux": "electron-builder --linux AppImage",
+    "build:win":   "electron-builder --win nsis",
+    "build:mac":   "electron-builder --mac dmg",
+    "build:all":   "electron-builder --linux AppImage --win nsis --mac dmg"
+  },
+  "build": {
+    "appId": "com.comfy.cloudmanager",
+    "productName": "ComfyUI Cloud Manager",
+    "directories": { "output": "dist" },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility",
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    }
+  },
+  "devDependencies": {
+    "electron": "^42.4.0",
+    "electron-builder": "^25.1.8"
+  }
+}

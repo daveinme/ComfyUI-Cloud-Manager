@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Log</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg0: #11111b;
+  --bg1: #1e1e2e;
+  --bg2: #181825;
+  --bg3: #313244;
+  --text: #cdd6f4;
+  --muted: #6c7086;
+  --blue: #89b4fa;
+  --green: #a6e3a1;
+}
+body {
+  background: var(--bg0);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 12px;
+}
+#toolbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--bg3);
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.log-tab {
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+.log-tab.active { border-color: var(--bg3); color: var(--text); background: var(--bg1); }
+.spacer { flex: 1; }
+.btn {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  background: var(--bg3);
+  color: var(--text);
+}
+.btn:hover { opacity: 0.8; }
+#log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--green);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+#autoscroll-label {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="log-tab active" id="tab-log"   onclick="switchTab('log')">Output</div>
+  <div class="log-tab"        id="tab-watch" onclick="switchTab('watch')">Watch</div>
+  <div class="log-tab"        id="tab-gpu"   onclick="switchTab('gpu')">GPU</div>
+  <div class="spacer"></div>
+  <label id="autoscroll-label">
+    <input type="checkbox" id="cb-autoscroll" checked> Auto-scroll
+  </label>
+  <button class="btn" onclick="clearLog()">Pulisci</button>
+</div>
+
+<div id="log"></div>
+
+<script>
+const buffers = { log: '', watch: '', gpu: '' }
+let currentTab = 'log'
+
+function switchTab(tab) {
+  currentTab = tab
+  document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'))
+  document.getElementById('tab-' + tab).classList.add('active')
+  const el = document.getElementById('log')
+  el.textContent = buffers[tab]
+  scrollToBottom()
+}
+
+function append(channel, data) {
+  buffers[channel] += data
+  if (channel === currentTab) {
+    document.getElementById('log').textContent += data
+    scrollToBottom()
+  }
+}
+
+function scrollToBottom() {
+  if (document.getElementById('cb-autoscroll').checked) {
+    const el = document.getElementById('log')
+    el.scrollTop = el.scrollHeight
+  }
+}
+
+function clearLog() {
+  buffers[currentTab] = ''
+  document.getElementById('log').textContent = ''
+}
+
+window.api.onLog(d   => append('log',   d))
+window.api.onWatch(d => append('watch', d))
+window.api.onGpu(d   => append('gpu',   d))
+</script>
+</body>
+</html>
