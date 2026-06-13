@@ -55,7 +55,10 @@ dl "$D/latent_upscale_models" "$HF/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spati
 
 # LoRA distilled 1.1
 dl "$D/loras" "$HF/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled-lora-384-1.1.safetensors"
-dl "$D/loras" "$HF/Kijai/LTX2.3_comfy/resolve/main/loras/ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors"
+dl "$D/loras" "$HF/Kijai/LTX2.3_comfy/resolve/main/loras/ltx-2.3-22b-distilled-1.1_lora-dynamic_fro09_avg_rank_111_bf16.safetensors"
+
+# LoRA sperimentale SulphurAI
+dl "$D/loras" "$HF/SulphurAI/Sulphur-2-base/resolve/main/experimental/sulphur_experimental_lora_v1.safetensors"
 
 # VAE separati (audio + video) e tiny VAE
 dl "$D/vae" "$HF/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_video_vae_bf16.safetensors"

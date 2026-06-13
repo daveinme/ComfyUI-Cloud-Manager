@@ -128,6 +128,13 @@ dest="$D/loras/ltx23-enhancers.safetensors"
 if [ -f "$dest" ]; then warn "already present: ltx23-enhancers.safetensors"; else curl -L --progress-bar -o "$dest" "$REDIRECT_URL" && ok "ltx23-enhancers.safetensors"; fi
 
 echo ""
+echo "┌─────────────────────────────────────────────────────────────┐"
+echo "│ Sulphur experimental LoRA v1  (experimental)               │"
+echo "└─────────────────────────────────────────────────────────────┘"
+dl "$D/loras" \
+   "https://huggingface.co/SulphurAI/Sulphur-2-base/resolve/main/experimental/sulphur_experimental_lora_v1.safetensors"
+
+echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║  VERIFY                                                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
@@ -136,6 +143,7 @@ chk "$D/checkpoints/sulphur_dev_fp8mixed.safetensors"                           
 chk "$D/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors"                                   "Gemma 3 12B FP4"
 chk "$D/vae/LTX23_video_vae_bf16.safetensors"                                                  "VAE LTX2.3"
 chk "$D/loras/ltx-2.3-22b-distilled-lora-1.1_fro90_ceil72_condsafe.safetensors"               "LoRA distillata 4-step"
+chk "$D/loras/sulphur_experimental_lora_v1.safetensors"                                       "Sulphur experimental LoRA v1"
 chk "$D/latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors"                   "Upscaler x2"
 chk "$D/loras/Ltx2.3-Licon-VBVR-I2V-390K-R32.safetensors"                                   "LoRA VBVR 390K"
 chk "$D/loras/ltx-2.3-22b-ic-lora-union-control-ref0.5.safetensors"                          "IC-LoRA Union Control"

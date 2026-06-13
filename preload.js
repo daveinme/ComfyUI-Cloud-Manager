@@ -37,6 +37,12 @@ contextBridge.exposeInMainWorld('api', {
   gpuStart:          (p)   => ipcRenderer.invoke('gpu-start', p),
   gpuStop:           ()    => ipcRenderer.invoke('gpu-stop'),
 
+  // Custom Nodes
+  nodeClone:         (p)   => ipcRenderer.invoke('node-clone', p),
+  nodePull:          (p)   => ipcRenderer.invoke('node-pull', p),
+  nodeUpload:        (p)   => ipcRenderer.invoke('node-upload', p),
+  pickNodeFolder:    ()    => ipcRenderer.invoke('pick-node-folder'),
+
   // Log streaming — payload: { text, replace }
   onLog:             (cb)  => ipcRenderer.on('log',            (_, d) => cb(d)),
   onWatch:           (cb)  => ipcRenderer.on('watch',          (_, d) => cb(d)),

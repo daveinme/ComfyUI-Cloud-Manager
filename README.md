@@ -16,12 +16,14 @@ A desktop application for deploying and managing ComfyUI on cloud GPU providers 
   - [Connecting to a server](#connecting-to-a-server)
   - [Deploying a script](#deploying-a-script)
   - [Civitai download](#civitai-download)
+  - [Custom Nodes](#custom-nodes)
   - [Download Output](#download-output)
   - [GPU Monitor](#gpu-monitor)
   - [Settings](#settings)
 - [Security](#security)
 - [Building binaries](#building-binaries)
 - [Project structure](#project-structure)
+- [Changelog](#changelog)
 - [Contributing](#contributing)
 
 ---
@@ -45,9 +47,10 @@ No SSH terminal knowledge required for day-to-day use.
 
 | Feature | Description |
 |---|---|
-| **Script Library** | 8 pre-built download scripts for popular video and image models, filterable by category |
+| **Script Library** | 9 pre-built download scripts for popular video and image models, filterable by category |
 | **Custom script deploy** | Upload and run any `.sh` script on the remote server |
 | **Civitai Download** | Download any Civitai model directly to the server — no local storage used |
+| **Custom Nodes** | Install nodes via git clone (public or private with GH token), update with git pull, or upload a local folder directly |
 | **Fetch once** | One-shot rsync: pull all output files from the server to your local folder |
 | **Watch live** | Background polling: new files are downloaded automatically at a configurable interval |
 | **GPU Monitor** | Live VRAM usage, temperature, and utilization streamed via SSH |
@@ -66,6 +69,7 @@ Eight scripts are included, covering the latest open-source video and image gene
 | Name | Size | Description |
 |---|---|---|
 | **10Eros v1 FP8** | ~65 GB | LTX 2.3 checkpoint + Gemma 3 12B encoder + spatial upscaler |
+| **10Eros v1 BF16** | ~64 GB | Full-precision BF16 variant — recommended for A40 (48 GB VRAM) |
 | **Sulphur-2 FP8** | ~43 GB | LTX 2.3 Sulphur-2 checkpoint + encoder + VAE |
 | **LTX 2.3 Distilled 1.1** | ~55 GB | LTX 2.3 22B distilled full pack + IC-LoRA + enhancers |
 | **Wan 2.2 Bernini FP8** | ~43 GB | Bernini HIGH+LOW 14B FP8 + UMT5 encoder + Lightning LoRA |
@@ -202,6 +206,34 @@ The file is downloaded directly onto the remote server. Your Civitai token is pa
 
 ---
 
+### Custom Nodes
+
+The **Custom Nodes** panel lets you install and manage ComfyUI custom nodes on the remote server without opening a terminal.
+
+**Install from GitHub (git clone)**
+
+1. Go to *Custom Nodes* in the sidebar.
+2. Paste the GitHub repository URL (e.g. `https://github.com/author/repo`).
+3. For private repositories, enter your GitHub personal access token in the *GH Token* field — it is used only for this clone and never stored on the server.
+4. Click **⬇ Clone**. The node is cloned into `custom_nodes/` and dependencies are installed automatically if a `requirements.txt` is present.
+
+**Update an installed node (git pull)**
+
+1. Enter the node folder name (as it appears in `custom_nodes/`).
+2. Click **↑ Pull**. The app runs `git pull` on the remote folder.
+
+**Upload a local folder**
+
+Use this for private nodes that are not on GitHub at all (e.g. nodes under active development on your machine).
+
+1. Click **Browse** and select the node folder on your local machine.
+2. Click **⬆ Upload**. The app uses rsync to transfer the folder to `custom_nodes/`, automatically excluding `__pycache__`, `.pyc`, and `.git` files.
+3. If a `requirements.txt` is found, dependencies are installed on the server automatically.
+
+> **Note:** after installing or updating a node, restart ComfyUI on the server for it to be loaded.
+
+---
+
 ### Download Output
 
 The **Download Output** panel has two modes:
@@ -285,6 +317,7 @@ comfy_gui/
 ├── install.bat       # One-click launch — Windows
 └── scripts/
     └── download/     # Model download scripts (.sh)
+        ├── 10Eros_v1-bf16.sh
         ├── 10Eros_v1-fp8mixed.sh
         ├── FireRed-Image-Edit.1.1.sh
         ├── LTX23-Distilled-1.1.sh
@@ -294,6 +327,31 @@ comfy_gui/
         ├── wan2.2_i2v_high_noise_14B_fp8_scaled.sh
         └── Z-Image-Turbo-FP8.sh
 ```
+
+---
+
+## Changelog
+
+### v0.3.0 — 2026-06-13
+
+**New features**
+- **Custom Nodes panel** — install nodes via `git clone` (public or private with GH token), update with `git pull`, or upload a local folder via rsync. Dependencies from `requirements.txt` are installed automatically. `__pycache__` and `.pyc` files are excluded from uploads.
+
+**Download scripts**
+- `10Eros_v1-bf16.sh` — new script for the full BF16 variant of 10Eros v1 (recommended for A40 / 48 GB VRAM)
+- `LTX23-Distilled-1.1.sh` — updated Kijai dynamic LoRA from `rank_105` to `rank_111` (distilled-1.1); added `sulphur_experimental_lora_v1`
+- `Sulphur2-dev-FP8-mixed.sh` — added `sulphur_experimental_lora_v1`
+
+---
+
+### v0.2.0 — Initial release
+
+- Script library with 8 download scripts
+- Civitai direct download
+- Fetch once / Watch live output sync
+- GPU Monitor
+- SSH Key Manager
+- System tray
 
 ---
 

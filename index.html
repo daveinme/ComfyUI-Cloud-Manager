@@ -500,6 +500,10 @@ body {
       <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8l3 3 3-3"/></svg>
       Civitai Download
     </div>
+    <div class="sb-item" onclick="showPanel('nodes')" data-panel="nodes">
+      <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="5" height="4" rx="1"/><rect x="10" y="3" width="5" height="4" rx="1"/><rect x="5.5" y="10" width="5" height="4" rx="1"/><path d="M3.5 7v2h9V7M8 9v1"/></svg>
+      Custom Nodes
+    </div>
     <div class="sb-item" onclick="showPanel('output')" data-panel="output">
       <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V4h6v5"/><path d="M8 4V1"/></svg>
       Download Output
@@ -578,6 +582,62 @@ body {
         <button class="btn btn-primary" onclick="downloadCivitai()">Download to Server</button>
       </div>
       <p class="hint">Civitai token can be configured in Settings.</p>
+    </div>
+
+    <!-- Custom Nodes -->
+    <div class="panel" id="panel-nodes">
+      <h2>Custom Nodes</h2>
+
+      <!-- inner tabs -->
+      <div class="output-tabs">
+        <div class="output-tab active" id="ntab-clone"  onclick="switchNodesTab('clone')">Git Clone</div>
+        <div class="output-tab"        id="ntab-pull"   onclick="switchNodesTab('pull')">Git Pull</div>
+        <div class="output-tab"        id="ntab-upload" onclick="switchNodesTab('upload')">Upload Local</div>
+      </div>
+
+      <!-- Clone sub-panel -->
+      <div class="output-sub active" id="nsub-clone">
+        <div class="field-group">
+          <label>GitHub repository URL</label>
+          <input id="n-clone-url" type="text" placeholder="https://github.com/author/repo">
+        </div>
+        <div class="field-group">
+          <label>GitHub Token (only for private repos)</label>
+          <input id="n-gh-token" type="password" placeholder="ghp_xxxxxxxxxxxxxx">
+          <span class="hint">Leave empty for public repos. Token is not stored on the server.</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="nodeClone()">⬇ Clone</button>
+        </div>
+        <p class="hint">The node is cloned into <code>custom_nodes/</code>. If a <code>requirements.txt</code> is found, dependencies are installed automatically.</p>
+      </div>
+
+      <!-- Pull sub-panel -->
+      <div class="output-sub" id="nsub-pull">
+        <div class="field-group">
+          <label>Node folder name (as it appears in custom_nodes/)</label>
+          <input id="n-pull-name" type="text" placeholder="ComfyUI-KJNodes">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="nodePull()">↑ Pull</button>
+        </div>
+        <p class="hint">Runs <code>git pull</code> inside the node folder on the server.</p>
+      </div>
+
+      <!-- Upload sub-panel -->
+      <div class="output-sub" id="nsub-upload">
+        <div class="field-group">
+          <label>Local node folder</label>
+          <div class="script-row">
+            <input id="n-upload-path" type="text" placeholder="Select folder..." readonly>
+            <button class="btn btn-secondary btn-sm" onclick="pickNodeFolder()">Browse</button>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="nodeUpload()">⬆ Upload</button>
+        </div>
+        <p class="hint">Transfers the folder via rsync. <code>__pycache__</code>, <code>.pyc</code> and <code>.git</code> files are excluded automatically. If a <code>requirements.txt</code> is present, dependencies are installed on the server.</p>
+      </div>
     </div>
 
     <!-- Download Output (Fetch + Watch combined) -->
@@ -1268,6 +1328,48 @@ async function saveSettings() {
   await window.api.saveConfig(config)
   buildDestPresets()
   appendLog('Settings saved.\n')
+}
+
+// ── Custom Nodes ──
+
+function switchNodesTab(tab) {
+  document.querySelectorAll('.output-tab[id^="ntab-"]').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.output-sub[id^="nsub-"]').forEach(s => s.classList.remove('active'))
+  document.getElementById('ntab-' + tab).classList.add('active')
+  document.getElementById('nsub-' + tab).classList.add('active')
+}
+
+async function nodeClone() {
+  if (!checkConn()) return
+  const url     = document.getElementById('n-clone-url').value.trim()
+  const ghToken = document.getElementById('n-gh-token').value.trim()
+  if (!url) { appendLog('⚠ Enter a repository URL\n'); return }
+  const name = url.split('/').pop().replace(/\.git$/, '')
+  appendLog(`\n=== Clone node: ${name} ===\n`)
+  showPanel('nodes')
+  await window.api.nodeClone({ conn: config.conn, repoUrl: url, ghToken })
+}
+
+async function nodePull() {
+  if (!checkConn()) return
+  const name = document.getElementById('n-pull-name').value.trim()
+  if (!name) { appendLog('⚠ Enter the node folder name\n'); return }
+  appendLog(`\n=== Pull node: ${name} ===\n`)
+  await window.api.nodePull({ conn: config.conn, nodeName: name })
+}
+
+async function pickNodeFolder() {
+  const p = await window.api.pickNodeFolder()
+  if (p) document.getElementById('n-upload-path').value = p
+}
+
+async function nodeUpload() {
+  if (!checkConn()) return
+  const localPath = document.getElementById('n-upload-path').value.trim()
+  if (!localPath) { appendLog('⚠ Select a local folder first\n'); return }
+  const name = localPath.split('/').pop()
+  appendLog(`\n=== Upload node: ${name} ===\n`)
+  await window.api.nodeUpload({ conn: config.conn, localPath })
 }
 
 // ── UI helpers ──

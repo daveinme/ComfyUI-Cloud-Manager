@@ -493,6 +493,92 @@ ipcMain.handle('gpu-stop', () => {
   return true
 })
 
+// --- Custom Nodes ---
+
+function customNodesPath(conn) {
+  if (conn.provider === 'runpod')
+    return '/workspace/runpod-slim/ComfyUI/custom_nodes'
+  return '/workspace/ComfyUI/custom_nodes'
+}
+
+// git clone di un nodo pubblico (o privato con token GH)
+ipcMain.handle('node-clone', async (event, { conn, repoUrl, ghToken }) => {
+  let url = repoUrl.trim()
+  if (ghToken && url.startsWith('https://github.com/')) {
+    url = url.replace('https://github.com/', `https://${ghToken}@github.com/`)
+  }
+  const nodesDir = customNodesPath(conn)
+  const nodeName = path.basename(url.replace(/\.git$/, ''))
+  const remoteCmd =
+    `mkdir -p ${nodesDir} && ` +
+    `if [ -d "${nodesDir}/${nodeName}" ]; then ` +
+    `  echo "⏭ already present: ${nodeName}"; ` +
+    `else ` +
+    `  git clone --depth 1 "${url}" "${nodesDir}/${nodeName}" && ` +
+    `  echo "✅ cloned: ${nodeName}" && ` +
+    `  if [ -f "${nodesDir}/${nodeName}/requirements.txt" ]; then ` +
+    `    pip install -q -r "${nodesDir}/${nodeName}/requirements.txt" && echo "✅ dependencies installed"; ` +
+    `  fi; ` +
+    `fi`
+  return streamProc(event, ['ssh', '-t', ...sshArgs(conn), `root@${conn.host}`, remoteCmd], 'log')
+})
+
+// git pull su un nodo già installato
+ipcMain.handle('node-pull', async (event, { conn, nodeName }) => {
+  const nodeDir = `${customNodesPath(conn)}/${nodeName}`
+  const remoteCmd =
+    `if [ -d "${nodeDir}/.git" ]; then ` +
+    `  git -C "${nodeDir}" pull && echo "✅ updated: ${nodeName}"; ` +
+    `else ` +
+    `  echo "❌ not a git repo: ${nodeName}"; ` +
+    `fi`
+  return streamProc(event, ['ssh', '-t', ...sshArgs(conn), `root@${conn.host}`, remoteCmd], 'log')
+})
+
+// Upload locale: rsync di una cartella escludendo __pycache__ e .pyc,
+// poi pip install se requirements.txt è presente
+ipcMain.handle('node-upload', async (event, { conn, localPath }) => {
+  const nodeName = path.basename(localPath)
+  const nodesDir = customNodesPath(conn)
+  const dest = `${nodesDir}/${nodeName}`
+
+  event.sender.send('log', { text: `\n📤 Uploading ${nodeName}...\n`, replace: false })
+
+  const rsyncArgs = [
+    'rsync', '-av', '--delete',
+    '--exclude=__pycache__',
+    '--exclude=*.pyc',
+    '--exclude=*.pyo',
+    '--exclude=.git',
+    '-e', `ssh -p ${conn.port} -i ${conn.sshKey} -o StrictHostKeyChecking=no -o ConnectTimeout=15`,
+    localPath + '/',
+    `root@${conn.host}:${dest}/`
+  ]
+  const rsyncCode = await streamProc(event, rsyncArgs, 'log')
+  if (rsyncCode !== 0) return rsyncCode
+
+  // pip install se requirements.txt esiste nella cartella locale
+  const reqFile = path.join(localPath, 'requirements.txt')
+  if (fs.existsSync(reqFile)) {
+    event.sender.send('log', { text: `\n📦 Installing dependencies...\n`, replace: false })
+    const pipCmd = `pip install -q -r "${dest}/requirements.txt" && echo "✅ dependencies installed"`
+    return streamProc(event, ['ssh', '-t', ...sshArgs(conn), `root@${conn.host}`, pipCmd], 'log')
+  }
+
+  event.sender.send('log', { text: `\n✅ ${nodeName} uploaded.\n`, replace: false })
+  return rsyncCode
+})
+
+// File picker per selezionare una cartella nodo locale
+ipcMain.handle('pick-node-folder', async () => {
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Select custom node folder',
+    defaultPath: path.join(os.homedir(), 'ComfyUI', 'custom_nodes'),
+    properties: ['openDirectory']
+  })
+  return result.canceled ? null : result.filePaths[0]
+})
+
 // --- Utility ---
 
 function countFiles(dir) {
